@@ -168,7 +168,7 @@
         </div>
     </div>
 
-    <main id="home-view" class="pt-14 pb-12 opacity-0 view-transition">
+    <main id="home-view" class="pt-4 pb-12 opacity-0 view-transition">
         <!-- Destination Banner -->
         <div id="dest-banner" class="relative w-full h-[220px] overflow-hidden">
             <img id="hero-image" src="" class="w-full h-full object-cover" />
@@ -178,8 +178,8 @@
         </div>
 
         <!-- Checklist Section -->
-        <section class="px-container-margin mt-6 mb-8">
-            <div class="bg-white rounded-xxl p-lg shadow-sm">
+        <section class="px-container-margin mt-4 mb-4">
+            <div class="bg-white rounded-xxl p-6 shadow-sm">
                 <div id="success-banner" class="hidden mb-6 p-4 bg-primary/5 rounded-xl text-center border border-primary/10 animate-soft-pulse">
                     <p class="text-primary font-bold text-[15px]">준비 완료! 즐거운 여행 되세요 ✈️</p>
                 </div>
@@ -201,19 +201,21 @@
         </section>
 
         <!-- Travel Benefits Section -->
-        <section class="bg-white rounded-xxl pt-8 pb-10 px-container-margin mb-8 shadow-sm mx-container-margin">
-            <div class="flex items-center justify-between mb-1 px-1">
-                <div class="flex items-center gap-1.5">
-                    <h3 id="service-list-title" class="text-[19px] font-bold text-on-surface">여행 혜택</h3>
+        <section class="px-container-margin mb-8">
+            <div class="bg-white rounded-xxl p-6 shadow-sm">
+                <div class="flex items-center justify-between mb-1 px-1">
+                    <div class="flex items-center gap-1.5">
+                        <h3 id="service-list-title" class="text-[19px] font-bold text-on-surface">여행 혜택</h3>
+                    </div>
+                    <span id="service-count" class="text-[14px] text-[#adb5bd] font-medium">0개</span>
                 </div>
-                <span id="service-count" class="text-[14px] text-[#adb5bd] font-medium">0개</span>
-            </div>
-            <p class="text-[12px] text-[#ced4da] px-1 mb-6 leading-tight">
-                아래 일부 서비스는 광고이며, 링크를 통한 구매 시 수수료를 지급받습니다.
-            </p>
+                <p class="text-[12px] text-[#ced4da] px-1 mb-6 leading-tight">
+                    아래 일부 서비스는 광고이며, 링크를 통한 구매 시 수수료를 지급받습니다.
+                </p>
 
-            <div id="service-list" class="space-y-1">
-                <!-- Services injected by JS -->
+                <div id="service-list" class="space-y-1">
+                    <!-- Services injected by JS -->
+                </div>
             </div>
         </section>
 
@@ -444,17 +446,17 @@
                                 group-active:bg-primary/10 transition-all shrink-0">
                         <span class="material-symbols-rounded text-[26px]">${service.icon}</span>
                     </div>
-                    <div class="flex-1 min-w-0 pr-2">
-                        <div class="flex items-center gap-2 mb-0.5">
+                    <div class="flex-1 min-w-0 pr-1">
+                        <div class="flex items-center gap-1.5 mb-0.5">
                             <h4 class="text-[16px] font-bold text-on-surface truncate">${service.title}</h4>
                             ${service.badgeText ? `
-                                <span class="${service.badgeColor} animate-gentle-float text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm shrink-0" 
+                                <span class="${service.badgeColor} text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold shadow-sm shrink-0 whitespace-nowrap" 
                                       style="text-shadow: 0 0 2px rgba(0,0,0,0.8);">
                                     ${service.badgeText}
                                 </span>
                             ` : ''}
                         </div>
-                        <p class="text-[13px] text-secondary font-medium truncate">${service.subtitle}</p>
+                        <p class="text-[13px] text-secondary font-medium leading-tight">${service.subtitle}</p>
                     </div>
                     <span class="material-symbols-rounded text-[#d1d6db] group-hover:translate-x-1 transition-all shrink-0">chevron_right</span>
                 </button>
