@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>체크리스트 마케팅 관리자</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3182f6',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; }
+        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.3); }
+        .material-symbols-rounded { 
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            width: 1em;
+            height: 1em;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div id="auth-view" class="max-w-md mx-auto mt-20 p-8 glass rounded-3xl shadow-xl">
+        <h1 class="text-2xl font-bold mb-6 text-gray-800">관리자 로그인</h1>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">이메일</label>
+                <input type="email" id="email" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="admin@example.com">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">비밀번호</label>
+                <input type="password" id="password" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="••••••••">
+            </div>
+            <button onclick="login()" class="w-full bg-blue-600 text-white p-3 rounded-xl font-bold hover:bg-blue-700 transition-all">로그인</button>
+            <p id="auth-error" class="text-red-500 text-sm hidden"></p>
+        </div>
+    </div>
+
+    <div id="admin-view" class="max-w-4xl mx-auto hidden">
+        <div class="flex items-center justify-between mb-8">
+            <h1 class="text-2xl font-bold text-gray-900">콘텐츠 관리 센터</h1>
+            <button onclick="logout()" class="text-gray-500 hover:text-red-500 font-medium">로그아웃</button>
+        </div>
+
+        <!-- 탭 메뉴 -->
+        <div class="flex gap-4 mb-8 border-b border-gray-200">
+            <button onclick="switchTab('marketing')" id="tab-marketing" class="px-4 py-2 text-sm font-bold border-b-2 border-blue-600 text-blue-600 transition-all">마케팅 항목 관리</button>
+            <button onclick="switchTab('services')" id="tab-services" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition-all">하단 서비스 관리</button>
+        </div>
+
+        <div id="marketing-section">
+            <div id="item-list" class="space-y-4">
+                <!-- 데이터 로딩 상태 표시 -->
+                <div id="status-message" class="text-center py-10 text-gray-500">
+                    <p class="animate-pulse">데이터를 불러오는 중입니다...</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="services-section" class="hidden">
+            <div id="service-list" class="space-y-4">
+                <p class="text-center py-10 text-gray-500">서비스 데이터를 불러오는 중...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal (Marketing) -->
+    <div id="edit-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white w-full max-w-lg rounded-3xl p-8 shadow-2xl">
+            <h2 class="text-xl font-bold mb-6">항목 수정</h2>
+            <form id="edit-form" class="space-y-4">
+                <input type="hidden" id="edit-doc-id">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">항목명 (Text)</label>
+                        <input type="text" id="edit-text" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">ID (순서)</label>
+                        <input type="number" id="edit-id" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">서브텍스트 (Subtext)</label>
+                    <input type="text" id="edit-subtext" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">버튼 문구 (Btn Text)</label>
+                    <input type="text" id="edit-btnText" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">랜딩 URL</label>
+                    <input type="url" id="edit-url" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                    <div class="flex items-center gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="edit-isActive" class="w-5 h-5 rounded border-gray-300">
+                            <span class="text-sm font-bold">노출 여부</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="edit-isAd" onchange="handleAdToggle(this.checked)" class="w-5 h-5 rounded border-gray-300">
+                            <span class="text-sm font-bold">광고 여부</span>
+                        </label>
+                    </div>
+                    <div id="ad-label-container">
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase">광고 라벨</label>
+                        <input type="text" id="edit-adLabel" class="p-1 text-sm border-b bg-transparent outline-none" placeholder="광고">
+                    </div>
+                </div>
+
+                <div class="flex gap-3 mt-8">
+                    <button type="button" onclick="closeModal()" class="flex-1 p-4 rounded-2xl font-bold text-gray-500 hover:bg-gray-100 transition-all">취소</button>
+                    <button type="submit" class="flex-1 p-4 rounded-2xl font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all">저장하기</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Modal (Service) -->
+    <div id="service-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white w-full max-w-lg rounded-3xl p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <h2 class="text-xl font-bold mb-4">서비스 수정</h2>
+            
+            <!-- 실시간 미리보기 영역 -->
+            <div class="mb-6 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                <p class="text-[10px] font-bold text-gray-400 uppercase mb-3">앱 미리보기 (Preview)</p>
+                <div class="bg-white p-4 rounded-xl shadow-sm flex items-center gap-4">
+                    <div id="preview-icon-container" class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+                        <span id="preview-icon" class="material-symbols-rounded text-2xl">hotel</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-0.5">
+                            <h4 id="preview-title" class="font-bold text-gray-900 truncate">서비스 제목</h4>
+                            <span id="preview-badge" class="text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm hidden" style="text-shadow: 0 0 2px rgba(0,0,0,0.8);"></span>
+                        </div>
+                        <p id="preview-subtitle" class="text-[13px] text-gray-500 truncate">부제목이 여기에 표시됩니다.</p>
+                    </div>
+                </div>
+            </div>
+
+            <form id="service-form" class="space-y-4">
+                <input type="hidden" id="service-doc-id">
+                
+                <div class="p-4 bg-blue-50 rounded-2xl mb-4">
+                    <label class="block text-xs font-bold text-blue-400 uppercase mb-3">아이콘 선택 (여행 테마)</label>
+                    <div id="icon-picker" class="grid grid-cols-6 gap-3">
+                        <!-- Icons will be injected here -->
+                    </div>
+                    <input type="hidden" id="service-icon">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">순서 (Order)</label>
+                        <input type="number" id="service-order" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">서비스 제목</label>
+                        <input type="text" id="service-title" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">부제목 (Subtitle)</label>
+                    <input type="text" id="service-subtitle" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">랜딩 URL</label>
+                    <input type="url" id="service-url" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div class="p-5 bg-gray-50 rounded-2xl border border-gray-100">
+                    <div class="flex items-center justify-between mb-4">
+                        <label class="text-sm font-bold text-gray-700">뱃지 사용 여부</label>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="service-useBadge" class="sr-only peer" onchange="toggleBadgeInputs(this.checked)">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+                    
+                    <div id="badge-settings" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">뱃지 문구</label>
+                            <input type="text" id="service-badgeText" class="w-full p-3 bg-white border rounded-xl outline-none" placeholder="인기">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">뱃지 색상 선택</label>
+                            <div class="flex gap-3">
+                                <button type="button" onclick="selectBadgeColor('bg-red-500')" id="color-bg-red-500" class="flex-1 p-3 rounded-xl bg-red-500 text-white text-xs font-bold border-2 border-transparent transition-all" style="text-shadow: 0 0 2px rgba(0,0,0,0.8);">빨강</button>
+                                <button type="button" onclick="selectBadgeColor('bg-blue-600')" id="color-bg-blue-600" class="flex-1 p-3 rounded-xl bg-blue-600 text-white text-xs font-bold border-2 border-transparent transition-all" style="text-shadow: 0 0 2px rgba(0,0,0,0.8);">파랑</button>
+                                <button type="button" onclick="selectBadgeColor('bg-yellow-400')" id="color-bg-yellow-400" class="flex-1 p-3 rounded-xl bg-yellow-400 text-white text-xs font-bold border-2 border-transparent transition-all" style="text-shadow: 0 0 2px rgba(0,0,0,0.8);">노랑</button>
+                            </div>
+                            <input type="hidden" id="service-badgeColor">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 mt-8">
+                    <button type="button" onclick="closeServiceModal()" class="flex-1 p-4 rounded-2xl font-bold text-gray-500 hover:bg-gray-100 transition-all">취소</button>
+                    <button type="submit" class="flex-1 p-4 rounded-2xl font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all">저장하기</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBldt59rNIIIj6N4yJ92aYkPk8kJwgrPvU",
+            authDomain: "toss-travel-essentials-v1.firebaseapp.com",
+            projectId: "toss-travel-essentials-v1",
+            storageBucket: "toss-travel-essentials-v1.firebasestorage.app",
+            messagingSenderId: "1024547704840",
+            appId: "1:1024547704840:web:a3b68d85c0e2391ee001bd"
+        };
+        
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        
+        db.settings({ cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED });
+
+        // Auth State Listener
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                document.getElementById('auth-view').classList.add('hidden');
+                document.getElementById('admin-view').classList.remove('hidden');
+                loadItems();
+            } else {
+                document.getElementById('auth-view').classList.remove('hidden');
+                document.getElementById('admin-view').classList.add('hidden');
+            }
+        });
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorEl = document.getElementById('auth-error');
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                errorEl.classList.add('hidden');
+            } catch (error) {
+                errorEl.innerText = "로그인 실패: " + error.message;
+                errorEl.classList.remove('hidden');
+            }
+        }
+
+        function logout() {
+            auth.signOut();
+        }
+
+        async function loadItems() {
+            const container = document.getElementById('item-list');
+            const statusMsg = document.getElementById('status-message');
+            
+            try {
+                // 데이터 로딩 (최대 3초 대기하며 재시도)
+                let snapshot = await db.collection('marketingConfig').get();
+                
+                if (snapshot.empty) {
+                    console.log("Retrying data fetch...");
+                    await new Promise(r => setTimeout(r, 1000));
+                    snapshot = await db.collection('marketingConfig').get();
+                }
+
+                if (snapshot.empty) {
+                    statusMsg.innerHTML = `
+                        <div class="p-4 bg-orange-50 rounded-xl border border-orange-100 text-center">
+                            <p class="text-orange-600 font-bold">데이터가 아직 서버에서 도달하지 않았습니다.</p>
+                            <p class="text-xs text-orange-400 mt-1">잠시 후 다시 시도하거나, 프로젝트 ID를 확인해 주세요.</p>
+                            <p class="text-[10px] text-gray-400 mt-2">Project: toss-travel-essentials-v1</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                statusMsg.style.display = 'none';
+                container.innerHTML = '';
+                
+                // ID 순으로 정렬 (서버에서 정렬이 안 될 경우를 대비해 클라이언트에서 수행)
+                const docs = [];
+                snapshot.forEach(doc => docs.push({ id: doc.id, ...doc.data() }));
+                docs.sort((a, b) => a.id - b.id);
+
+                docs.forEach(data => {
+                    const card = document.createElement('div');
+                    card.className = 'item-card bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4';
+                    
+                    card.innerHTML = `
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-xs font-bold px-2 py-0.5 rounded-full ${data.isActive ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-gray-500'}">
+                                    ${data.isActive ? '활성' : '비활성'}
+                                </span>
+                                <span class="text-xs font-bold px-2 py-0.5 rounded-full ${data.isAd ? 'bg-amber-50 text-amber-600' : 'bg-green-50 text-green-600'}">
+                                    ${data.isAd ? '광고' : '일반'}
+                                </span>
+                                <span class="text-sm font-mono text-gray-400">ID: ${data.id}</span>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-900">${data.text}</h3>
+                            <p class="text-sm text-gray-500 truncate max-w-md">${data.subtext}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick='openEditModal("${data.id}", ${JSON.stringify(data).replace(/'/g, "&apos;")})' 
+                                    class="px-4 py-2 bg-gray-900 text-white text-sm font-bold rounded-xl hover:bg-gray-800 transition-colors">
+                                편집하기
+                            </button>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (error) {
+                console.error("Error loading items:", error);
+                statusMsg.innerHTML = `
+                    <div class="p-4 bg-red-50 rounded-xl border border-red-100">
+                        <p class="text-red-600 font-bold">데이터 로드 실패!</p>
+                        <p class="text-xs text-red-400 mt-1">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function openEditModal(docId, data) {
+            document.getElementById('edit-doc-id').value = docId;
+            document.getElementById('edit-text').value = data.text;
+            document.getElementById('edit-id').value = data.id;
+            document.getElementById('edit-subtext').value = data.subtext;
+            document.getElementById('edit-btnText').value = data.btnText;
+            document.getElementById('edit-url').value = data.url;
+            document.getElementById('edit-isActive').checked = data.isActive;
+            document.getElementById('edit-isAd').checked = data.isAd;
+            document.getElementById('edit-adLabel').value = data.adLabel || '광고';
+            
+            handleAdToggle(data.isAd);
+            
+            document.getElementById('edit-modal').classList.remove('hidden');
+            document.getElementById('edit-modal').classList.add('flex');
+        }
+
+        function handleAdToggle(isAd) {
+            const labelInput = document.getElementById('edit-adLabel');
+            if (isAd) {
+                labelInput.value = "광고";
+                labelInput.readOnly = true;
+                labelInput.classList.add('text-blue-600', 'font-bold');
+            } else {
+                labelInput.readOnly = false;
+                labelInput.classList.remove('text-blue-600', 'font-bold');
+            }
+        }
+
+        function switchTab(tab) {
+            const marketingTab = document.getElementById('tab-marketing');
+            const servicesTab = document.getElementById('tab-services');
+            const marketingSection = document.getElementById('marketing-section');
+            const servicesSection = document.getElementById('services-section');
+
+            if (tab === 'marketing') {
+                marketingTab.className = "px-4 py-2 text-sm font-bold border-b-2 border-blue-600 text-blue-600 transition-all";
+                servicesTab.className = "px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition-all";
+                marketingSection.classList.remove('hidden');
+                servicesSection.classList.add('hidden');
+                loadItems();
+            } else {
+                servicesTab.className = "px-4 py-2 text-sm font-bold border-b-2 border-blue-600 text-blue-600 transition-all";
+                marketingTab.className = "px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition-all";
+                servicesSection.classList.remove('hidden');
+                marketingSection.classList.add('hidden');
+                loadServices();
+            }
+        }
+
+        async function loadServices() {
+            const container = document.getElementById('service-list');
+            try {
+                const snapshot = await db.collection('servicesConfig').orderBy('order').get();
+                container.innerHTML = '';
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    
+                    // 호환성 처리 (badgeText가 우선, 없으면 badge.text 확인)
+                    let bText = data.badgeText || (data.badge ? data.badge.text : "");
+                    let bColor = data.badgeColor || (data.badge ? data.badge.color : "bg-blue-500");
+
+                    const card = document.createElement('div');
+                    card.className = 'bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center group';
+                    card.innerHTML = `
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 shrink-0">
+                                <span class="material-symbols-rounded text-2xl" style="font-variation-settings: 'FILL' 1">${data.icon}</span>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-2 mb-0.5">
+                                    <h3 class="font-bold text-gray-900 truncate">${data.title}</h3>
+                                    ${bText ? `<span class="text-[10px] px-1.5 py-0.5 rounded ${bColor} text-white font-bold shrink-0" style="text-shadow: 0 0 1px rgba(0,0,0,0.8);">${bText}</span>` : ''}
+                                </div>
+                                <p class="text-sm text-gray-500 truncate">${data.subtitle}</p>
+                            </div>
+                        </div>
+                        <button onclick='openServiceEditModal("${doc.id}", ${JSON.stringify({...data, badgeText: bText, badgeColor: bColor}).replace(/'/g, "&apos;")})' 
+                                class="ml-4 px-4 py-2 bg-gray-900 text-white text-sm font-bold rounded-xl hover:bg-gray-800 transition-all shrink-0">
+                            편집하기
+                        </button>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (error) {
+                container.innerHTML = `<div class="p-4 text-red-500">${error.message}</div>`;
+            }
+        }
+
+        const TRAVEL_ICONS = [
+            'sim_card', 'hotel', 'language', 'confirmation_number', 'local_activity', 
+            'home_work', 'directions_car_filled', 'explore', 'flight_takeoff',
+            'luggage', 'passport', 'credit_card', 'map', 'restaurant', 'shopping_bag',
+            'train', 'bus_alert', 'camera_alt', 'beach_access', 'castle'
+        ];
+
+        function renderIconPicker(selectedIcon) {
+            const picker = document.getElementById('icon-picker');
+            picker.innerHTML = TRAVEL_ICONS.map(icon => `
+                <div onclick="selectIcon('${icon}')" id="icon-${icon}" 
+                    class="w-10 h-10 rounded-lg flex items-center justify-center cursor-pointer border-2 transition-all
+                    ${icon === selectedIcon ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-gray-400 border-gray-100 hover:border-blue-200'}">
+                    <span class="material-symbols-rounded text-xl" style="font-size: 20px;">${icon}</span>
+                </div>
+            `).join('');
+            document.getElementById('service-icon').value = selectedIcon;
+        }
+
+        function selectIcon(icon) {
+            const prevIcon = document.getElementById('service-icon').value;
+            if (prevIcon) {
+                const prevEl = document.getElementById(`icon-${prevIcon}`);
+                if (prevEl) prevEl.className = "w-10 h-10 rounded-lg flex items-center justify-center cursor-pointer border-2 bg-white text-gray-400 border-transparent hover:bg-gray-100";
+            }
+            
+            const newEl = document.getElementById(`icon-${icon}`);
+            if (newEl) newEl.className = "w-10 h-10 rounded-lg flex items-center justify-center cursor-pointer border-2 bg-blue-600 text-white border-blue-600";
+            
+            document.getElementById('service-icon').value = icon;
+            updateServicePreview();
+        }
+
+        function toggleBadgeInputs(checked) {
+            const settings = document.getElementById('badge-settings');
+            settings.style.opacity = checked ? '1' : '0.3';
+            settings.style.pointerEvents = checked ? 'auto' : 'none';
+        }
+
+        function selectBadgeColor(color) {
+            const colors = ['bg-red-500', 'bg-blue-600', 'bg-yellow-400'];
+            colors.forEach(c => {
+                const el = document.getElementById(`color-${c}`);
+                if (el) el.classList.remove('border-gray-900', 'scale-105');
+            });
+            
+            const selectedEl = document.getElementById(`color-${color}`);
+            if (selectedEl) selectedEl.classList.add('border-gray-900', 'scale-105');
+            
+            document.getElementById('service-badgeColor').value = color;
+            updateServicePreview();
+        }
+
+        function openServiceEditModal(docId, data) {
+            document.getElementById('service-doc-id').value = docId;
+            document.getElementById('service-order').value = data.order;
+            document.getElementById('service-title').value = data.title;
+            document.getElementById('service-subtitle').value = data.subtitle;
+            document.getElementById('service-url').value = data.url;
+            
+            const useBadge = !!data.badgeText;
+            document.getElementById('service-useBadge').checked = useBadge;
+            document.getElementById('service-badgeText').value = data.badgeText || '';
+            
+            const badgeColor = data.badgeColor || 'bg-red-500';
+            selectBadgeColor(badgeColor);
+            toggleBadgeInputs(useBadge);
+            
+            renderIconPicker(data.icon || 'hotel');
+            updateServicePreview();
+            
+            document.getElementById('service-modal').classList.remove('hidden');
+            document.getElementById('service-modal').classList.add('flex');
+        }
+
+        function closeServiceModal() {
+            document.getElementById('service-modal').classList.add('hidden');
+            document.getElementById('service-modal').classList.remove('flex');
+        }
+
+        async function closeModal() {
+            document.getElementById('edit-modal').classList.add('hidden');
+            document.getElementById('edit-modal').classList.remove('flex');
+        }
+
+        document.getElementById('edit-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const docId = document.getElementById('edit-doc-id').value;
+            const data = {
+                text: document.getElementById('edit-text').value,
+                id: parseInt(document.getElementById('edit-id').value),
+                subtext: document.getElementById('edit-subtext').value,
+                btnText: document.getElementById('edit-btnText').value,
+                url: document.getElementById('edit-url').value,
+                isActive: document.getElementById('edit-isActive').checked,
+                isAd: document.getElementById('edit-isAd').checked,
+                adLabel: document.getElementById('edit-adLabel').value
+            };
+
+            try {
+                await db.collection('marketingConfig').doc(docId).update(data);
+                alert('성공적으로 저장되었습니다. 페이지를 새로고침합니다.');
+                location.reload();
+            } catch (error) {
+                alert('저장 실패: ' + error.message);
+            }
+        });
+
+        function updateServicePreview() {
+            const title = document.getElementById('service-title').value;
+            const subtitle = document.getElementById('service-subtitle').value;
+            const icon = document.getElementById('service-icon').value;
+            const useBadge = document.getElementById('service-useBadge').checked;
+            const badgeText = document.getElementById('service-badgeText').value;
+            const badgeColor = document.getElementById('service-badgeColor').value || 'bg-blue-500';
+
+            document.getElementById('preview-title').innerText = title || '서비스 제목';
+            document.getElementById('preview-subtitle').innerText = subtitle || '부제목이 표시됩니다.';
+            document.getElementById('preview-icon').innerText = icon || 'hotel';
+            
+            const badgeEl = document.getElementById('preview-badge');
+            if (useBadge && badgeText) {
+                badgeEl.innerText = badgeText;
+                badgeEl.className = `text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm animate-gentle-float text-white ${badgeColor}`;
+                badgeEl.classList.remove('hidden');
+            } else {
+                badgeEl.classList.add('hidden');
+            }
+        }
+
+        // 실시간 미리보기 바인딩
+        ['service-title', 'service-subtitle', 'service-badgeText'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateServicePreview);
+        });
+        document.getElementById('service-useBadge').addEventListener('change', updateServicePreview);
+
+        document.getElementById('service-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const docId = document.getElementById('service-doc-id').value;
+            const useBadge = document.getElementById('service-useBadge').checked;
+            
+            const data = {
+                icon: document.getElementById('service-icon').value,
+                order: parseInt(document.getElementById('service-order').value),
+                title: document.getElementById('service-title').value,
+                subtitle: document.getElementById('service-subtitle').value,
+                url: document.getElementById('service-url').value,
+                badgeText: useBadge ? document.getElementById('service-badgeText').value : "",
+                badgeColor: useBadge ? document.getElementById('service-badgeColor').value : ""
+            };
+
+            try {
+                await db.collection('servicesConfig').doc(docId).update(data);
+                alert('성공적으로 저장되었습니다. 페이지를 새로고침합니다.');
+                location.reload();
+            } catch (error) {
+                alert('저장 실패: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>

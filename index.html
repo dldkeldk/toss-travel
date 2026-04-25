@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html class="light" lang="ko">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
+    <title>비행기 준비물</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#3182f6",
+                        "background": "#f2f4f6",
+                        "surface": "#ffffff",
+                        "on-surface": "#191f28",
+                        "secondary": "#8b95a1",
+                        "outline-variant": "#e5e8eb"
+                    },
+                    borderRadius: {
+                        "xxl": "24px",
+                        "xl": "16px",
+                        "lg": "12px"
+                    },
+                    spacing: {
+                        "container-margin": "20px",
+                        "lg": "24px",
+                        "md": "16px",
+                        "sm": "8px"
+                    },
+                    fontFamily: {
+                        "manrope": ["Manrope", "sans-serif"],
+                        "inter": ["Inter", "sans-serif"]
+                    },
+                    animation: {
+                        'slide-up': 'slide-up 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                        'fade-in': 'fade-in 0.3s ease-out'
+                    },
+                    keyframes: {
+                        'slide-up': {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' }
+                        },
+                        'fade-in': {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .material-symbols-rounded {
+            font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            width: 1em;
+            height: 1em;
+            overflow: hidden;
+        }
+        @keyframes gentle-float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+        .animate-gentle-float {
+            animation: gentle-float 2s ease-in-out infinite;
+        }
+        /* [1] 스크롤바 제어 */
+        body::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        body::-webkit-scrollbar-thumb {
+            background-color: transparent;
+            border-radius: 10px;
+            transition: background-color 0.3s;
+        }
+
+        body.is-scrolling::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+        /* [2] 탭 피드백 및 호버 효과 */
+        .tap-feedback {
+            -webkit-tap-highlight-color: transparent;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        @media (hover: hover) {
+            .tap-feedback:hover {
+                background-color: rgba(0, 0, 0, 0.02);
+            }
+        }
+
+        .tap-feedback:active {
+            transform: scale(0.96);
+        }
+
+        .onboarding-btn:active {
+            border-color: #3182f6;
+            background-color: #ffffff;
+            box-shadow: 0 0 0 1px #3182f6;
+        }
+
+        body {
+            background-color: #f2f4f6;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .view-transition {
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+        }
+
+        @keyframes soft-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.85; transform: scale(1.05); }
+        }
+
+        .animate-soft-pulse {
+            animation: soft-pulse 2s infinite ease-in-out;
+        }
+        /* 배너 타이틀 가독성 향상을 위한 은은한 그림자 */
+        .hero-title-shadow {
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35), 0 0 2px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+
+<body class="text-on-surface font-inter overflow-x-hidden">
+
+    <!-- Onboarding Overlay -->
+    <div id="onboarding-overlay" class="fixed inset-0 z-[200] bg-surface flex flex-col view-transition">
+        <div id="step1-view" class="flex-1 flex flex-col pt-20 px-container-margin animate-slide-up">
+            <h1 class="font-manrope text-[26px] font-extrabold leading-tight mb-10">어디로 떠나시나요? ✈️</h1>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="selectDestination('일본')" class="onboarding-btn tap-feedback bg-background p-6 rounded-xxl text-[18px] font-bold border-2 border-transparent text-left">🍣 일본</button>
+                <button onclick="selectDestination('동남아')" class="onboarding-btn tap-feedback bg-background p-6 rounded-xxl text-[18px] font-bold border-2 border-transparent text-left">🌴 동남아</button>
+                <button onclick="selectDestination('유럽')" class="onboarding-btn tap-feedback bg-background p-6 rounded-xxl text-[18px] font-bold border-2 border-transparent text-left">🗼 유럽</button>
+                <button onclick="selectDestination('미국')" class="onboarding-btn tap-feedback bg-background p-6 rounded-xxl text-[18px] font-bold border-2 border-transparent text-left">🗽 미국</button>
+                <button onclick="selectDestination('중화')" class="onboarding-btn tap-feedback bg-background p-6 rounded-xxl text-[18px] font-bold border-2 border-transparent text-left">🐼 중화</button>
+                <button onclick="selectDestination('미정')" class="onboarding-btn tap-feedback bg-background p-6 rounded-xxl text-[18px] font-bold border-2 border-transparent text-left">🤔 미정</button>
+            </div>
+        </div>
+
+        <div id="step2-view" class="hidden flex-1 flex flex-col pt-20 px-container-margin animate-slide-up">
+            <h1 class="font-manrope text-[26px] font-extrabold leading-tight mb-10">어떤 여행인가요? 🧳</h1>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="selectTheme('일주일')" class="onboarding-btn tap-feedback bg-background p-6 rounded-xxl text-[18px] font-bold border-2 border-transparent text-left">📅일주일</button>
+                <button onclick="selectTheme('한 달 살기')" class="onboarding-btn tap-feedback bg-background p-6 rounded-xxl text-[18px] font-bold border-2 border-transparent text-left">🏠한달살기</button>
+                <button onclick="selectTheme('여름휴가')" class="onboarding-btn tap-feedback bg-background p-6 rounded-xxl text-[18px] font-bold border-2 border-transparent text-left">✨여름휴가</button>
+                <button onclick="selectTheme('신혼여행')" class="onboarding-btn tap-feedback bg-background p-6 rounded-xxl text-[18px] font-bold border-2 border-transparent text-left">💍신혼여행</button>
+                <button onclick="selectTheme('가족여행')" class="onboarding-btn tap-feedback bg-background p-6 rounded-xxl text-[18px] font-bold border-2 border-transparent text-left">🌱가족여행</button>
+                <button onclick="selectTheme('미정')" class="onboarding-btn tap-feedback bg-background p-6 rounded-xxl text-[18px] font-bold border-2 border-transparent text-left">🤔미정</button>
+            </div>
+        </div>
+    </div>
+
+    <main id="home-view" class="pt-14 pb-12 opacity-0 view-transition">
+        <!-- Destination Banner -->
+        <div id="dest-banner" class="relative w-full h-[220px] overflow-hidden">
+            <img id="hero-image" src="" class="w-full h-full object-cover" />
+            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-container-margin pb-8">
+                <h2 id="hero-title" class="text-white text-[26px] font-extrabold leading-tight hero-title-shadow"></h2>
+            </div>
+        </div>
+
+        <!-- Checklist Section -->
+        <section class="px-container-margin mt-6 mb-8">
+            <div class="bg-white rounded-xxl p-lg shadow-sm">
+                <div id="success-banner" class="hidden mb-6 p-4 bg-primary/5 rounded-xl text-center border border-primary/10 animate-soft-pulse">
+                    <p class="text-primary font-bold text-[15px]">준비 완료! 즐거운 여행 되세요 ✈️</p>
+                </div>
+
+                <div class="flex items-center justify-between mb-1 px-1">
+                    <div class="flex items-center gap-1.5">
+                        <h3 id="main-checklist-title" class="font-manrope text-[18px] font-bold text-on-surface">필수 준비물</h3>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-secondary font-bold">광고</span>
+                    </div>
+                    <span id="checklist-progress" class="text-[13px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-full">0/0</span>
+                </div>
+                <p class="text-[11px] text-secondary/40 px-1 mb-4 leading-tight">
+                    아래 서비스는 광고이며, 링크를 통한 구매 시 수수료를 지급받습니다.
+                </p>
+
+                <div id="checklist-items" class="space-y-2">
+                    <!-- Items injected by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Travel Benefits Section -->
+        <section class="bg-white rounded-xxl pt-8 pb-10 px-container-margin mb-8 shadow-sm mx-container-margin">
+            <div class="flex items-center justify-between mb-1 px-1">
+                <div class="flex items-center gap-1.5">
+                    <h3 id="service-list-title" class="text-[19px] font-bold text-on-surface">여행 혜택</h3>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-[#adb5bd] font-bold">광고</span>
+                </div>
+                <span id="service-count" class="text-[14px] text-[#adb5bd] font-medium">0개</span>
+            </div>
+            <p class="text-[12px] text-[#ced4da] px-1 mb-6 leading-tight">
+                아래 서비스는 광고이며, 링크를 통한 구매 시 수수료를 지급받습니다.
+            </p>
+
+            <div id="service-list" class="space-y-1">
+                <!-- Services injected by JS -->
+            </div>
+        </section>
+
+        <footer class="px-container-margin py-10 text-center">
+            <div class="font-manrope text-[#d1d6db] text-[11px] uppercase tracking-[0.2em] font-extrabold mb-4">
+                AIRPLANE SUPPLIES
+            </div>
+            <p class="text-[12px] text-secondary leading-relaxed">
+                본 채널은 파트너사와의 제휴를 통해 운영됩니다.<br />
+                링크를 통한 구매 시 수수료를 지급받으며, <br />
+                이는 서비스 운영에 사용됩니다.
+            </p>
+        </footer>
+    </main>
+
+    <script>
+        // Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyBldt59rNIIIj6N4yJ92aYkPk8kJwgrPvU",
+            authDomain: "toss-travel-essentials-v1.firebaseapp.com",
+            projectId: "toss-travel-essentials-v1",
+            storageBucket: "toss-travel-essentials-v1.firebasestorage.app",
+            messagingSenderId: "1024547704840",
+            appId: "1:1024547704840:web:a3b68d85c0e2391ee001bd"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const DEFAULT_CONFIG = {
+            checklist: [],
+            services: []
+        };
+
+        let config = { ...DEFAULT_CONFIG };
+
+        let state = {
+            currentView: 'onboarding',
+            selectedDestination: null,
+            selectedTheme: null,
+            checkedItems: JSON.parse(localStorage.getItem('airplane_checklist') || '[]')
+        };
+
+        // 스크롤바 제어
+        let scrollTimeout;
+        window.addEventListener('scroll', () => {
+            document.body.classList.add('is-scrolling');
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                document.body.classList.remove('is-scrolling');
+            }, 1000);
+        }, { passive: true });
+
+        function init() {
+            setupRealtimeSync();
+            updateProgress(true);
+        }
+
+        function setupRealtimeSync() {
+            // 1. 마케팅 리스트 동기화
+            db.collection('marketingConfig').onSnapshot(querySnapshot => {
+                if (!querySnapshot.empty) {
+                    const allItems = [];
+                    querySnapshot.forEach(doc => allItems.push({ docId: doc.id, ...doc.data() }));
+                    config.checklist = allItems
+                        .filter(item => item.isActive !== false)
+                        .sort((a, b) => (a.id || 0) - (b.id || 0))
+                        .map(data => ({
+                            id: data.id,
+                            text: data.text,
+                            subtext: data.subtext,
+                            isAd: data.isAd,
+                            adLabel: data.adLabel,
+                            link: { text: data.btnText, url: data.url }
+                        }));
+                    renderChecklist();
+                    updateProgress();
+                }
+            });
+
+            // 2. 서비스 리스트 동기화
+            db.collection('servicesConfig').orderBy('order').onSnapshot(querySnapshot => {
+                const services = [];
+                querySnapshot.forEach(doc => {
+                    const data = doc.data();
+                    let bText = data.badgeText;
+                    let bColor = data.badgeColor;
+                    if (!bText && data.badge && data.badge.text) bText = data.badge.text;
+                    if (!bColor && data.badge && data.badge.color) bColor = data.badge.color;
+
+                    services.push({
+                        id: doc.id,
+                        title: data.title,
+                        subtitle: data.subtitle,
+                        icon: data.icon,
+                        link: data.url,
+                        badgeText: bText || "",
+                        badgeColor: bColor || 'bg-blue-500',
+                        desc: data.desc
+                    });
+                });
+                config.services = services;
+                renderServiceList();
+            });
+        }
+
+        function selectDestination(dest) {
+            state.selectedDestination = dest;
+            document.getElementById('step1-view').classList.add('hidden');
+            document.getElementById('step2-view').classList.remove('hidden');
+        }
+
+        function selectTheme(theme) {
+            state.selectedTheme = theme;
+            completeOnboarding();
+        }
+
+        function completeOnboarding() {
+            const overlay = document.getElementById('onboarding-overlay');
+            const home = document.getElementById('home-view');
+            const d = state.selectedDestination || '미정';
+
+            const heroImg = document.getElementById('hero-image');
+            const heroTitle = document.getElementById('hero-title');
+            if (heroImg) {
+                heroImg.src = getBannerImage(d);
+                const positions = { '일본': 'center 15%', '유럽': 'center 10%', '미국': 'center 10%', '중화': 'center 10%' };
+                heroImg.style.objectPosition = positions[d] || 'center center';
+            }
+            if (heroTitle) heroTitle.innerText = getHeroTitle(d);
+
+            const mainTitleEl = document.getElementById('main-checklist-title');
+            if (mainTitleEl) mainTitleEl.innerText = d === '미정' ? '여행 준비물' : `${d} 여행 준비물`;
+
+            const serviceTitleEl = document.getElementById('service-list-title');
+            if (serviceTitleEl) serviceTitleEl.innerText = d === '미정' ? '여행 혜택' : `${d} 여행 혜택`;
+
+            overlay.style.transform = 'translateY(-100%)';
+            overlay.style.opacity = '0';
+            overlay.style.pointerEvents = 'none';
+
+            renderServiceList();
+            renderChecklist();
+
+            window.scrollTo(0, 0);
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                home.classList.remove('opacity-0');
+                state.currentView = 'home';
+            }, 400);
+        }
+
+        function getBannerImage(dest) {
+            const images = {
+                '일본': 'C:/Users/iaida/.gemini/antigravity/brain/95a81636-05f7-4507-98f5-f151da07ae8f/japan_banner_manekineko_extra_large_right_1777100204843.png',
+                '동남아': 'C:/Users/iaida/.gemini/antigravity/brain/95a81636-05f7-4507-98f5-f151da07ae8f/southeast_asia_banner_palm_right_1777100018053.png',
+                '유럽': 'C:/Users/iaida/.gemini/antigravity/brain/95a81636-05f7-4507-98f5-f151da07ae8f/europe_banner_eiffel_right_1777100005772.png',
+                '미국': 'C:/Users/iaida/.gemini/antigravity/brain/95a81636-05f7-4507-98f5-f151da07ae8f/usa_banner_right_statue_1777099788780.png',
+                '중화': 'C:/Users/iaida/.gemini/antigravity/brain/95a81636-05f7-4507-98f5-f151da07ae8f/china_taiwan_banner_taipei101_right_1777100178308.png',
+                '미정': 'C:/Users/iaida/.gemini/antigravity/brain/95a81636-05f7-4507-98f5-f151da07ae8f/undetermined_banner_no_text_1777088948292.png'
+            };
+            return images[dest] || images['미정'];
+        }
+
+        function getHeroTitle(dest) {
+            const titles = {
+                '일본': '골목마다 낭만이 가득한 곳,\n가벼운 마음으로 떠나볼까요',
+                '동남아': '에메랄드빛 바다가 부르는 곳,\n온전한 휴식을 시작해 보세요',
+                '유럽': '오랜 시간 꿈꿔온 풍경,\n발길 닿는 곳마다 그림이 될 거예요',
+                '미국': '영화 속 한 장면 같은 거리,\n새로운 모험을 준비해 볼까요',
+                '중화': '화려한 야경과 미식이 기다리는 곳,\n특별한 추억을 담아오세요',
+                '미정': '발길이 이끄는 어느 곳이든,\n가장 완벽한 여정이 될 거예요'
+            };
+            return titles[dest] || titles['미정'];
+        }
+
+        function renderChecklist() {
+            const container = document.getElementById('checklist-items');
+            const items = config.checklist;
+            const dest = state.selectedDestination;
+            let html = '';
+
+            items.forEach(item => {
+                const isChecked = state.checkedItems.includes(item.id);
+                const hasLink = !!item.link;
+
+                html += `
+                <div class="px-1 py-1.5 mb-1">
+                    <div class="flex items-center justify-between px-1 ${!isChecked ? 'mb-1.5' : ''}" onclick="toggleCheck(${item.id})">
+                        <div class="flex flex-col gap-0.5 pr-4">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="text-[16px] ${isChecked ? 'text-gray-400 line-through font-medium' : 'text-on-surface font-bold'} tracking-tight">
+                                    ${item.text}
+                                </span>
+                                ${item.isAd && !isChecked ? `<span class="text-[9px] px-1 py-0.5 rounded bg-gray-100 text-secondary font-bold">광고</span>` : ''}
+                            </div>
+                            ${!isChecked && item.subtext ? `<p class="text-[13px] text-secondary leading-snug">${item.subtext}</p>` : ''}
+                        </div>
+                        <div class="w-6 h-6 border-[2px] ${isChecked ? 'bg-primary border-primary' : 'border-gray-200 bg-white'} rounded-full flex items-center justify-center shrink-0">
+                             ${isChecked ? '<span class="material-symbols-rounded text-white text-[14px]">check</span>' : ''}
+                        </div>
+                    </div>
+                    ${!isChecked && hasLink ? `
+                    <div class="mt-3">
+                        <button onclick="window.open('${item.link.url}', '_blank'); event.stopPropagation();" 
+                            class="w-full py-3 bg-primary text-white rounded-xl text-[13px] font-bold flex items-center justify-center">
+                            ${item.link.text}
+                        </button>
+                    </div>
+                    ` : ''}
+                </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function renderServiceList() {
+            const container = document.getElementById('service-list');
+            const countContainer = document.getElementById('service-count');
+            const dest = state.selectedDestination;
+
+            let filteredServices = config.services.filter(s => s.id !== 'rakutentr' || dest === '일본');
+
+            if (countContainer) countContainer.innerText = `${filteredServices.length}개`;
+
+            container.innerHTML = filteredServices.map(service => `
+                <button onclick="window.open('${service.link}', '_blank')" 
+                    class="tap-feedback w-full flex items-center gap-4 p-4 rounded-xxl text-left group">
+                    <div class="w-12 h-12 bg-primary/5 flex items-center justify-center rounded-xl text-primary 
+                                group-active:bg-primary/10 transition-all shrink-0">
+                        <span class="material-symbols-rounded text-[26px]">${service.icon}</span>
+                    </div>
+                    <div class="flex-1 min-w-0 pr-2">
+                        <div class="flex items-center gap-2 mb-0.5">
+                            <h4 class="text-[16px] font-bold text-on-surface truncate">${service.title}</h4>
+                            ${service.badgeText ? `
+                                <span class="${service.badgeColor} animate-gentle-float text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm shrink-0" 
+                                      style="text-shadow: 0 0 2px rgba(0,0,0,0.8);">
+                                    ${service.badgeText}
+                                </span>
+                            ` : ''}
+                        </div>
+                        <p class="text-[13px] text-secondary font-medium truncate">${service.subtitle}</p>
+                    </div>
+                    <span class="material-symbols-rounded text-[#d1d6db] group-hover:translate-x-1 transition-all shrink-0">chevron_right</span>
+                </button>
+            `).join('');
+        }
+
+        function toggleCheck(id) {
+            if (state.checkedItems.includes(id)) state.checkedItems = state.checkedItems.filter(i => i !== id);
+            else state.checkedItems.push(id);
+            localStorage.setItem('airplane_checklist', JSON.stringify(state.checkedItems));
+            renderChecklist();
+            updateProgress();
+        }
+
+        function updateProgress(isInitial = false) {
+            const totalItems = config.checklist;
+            const checkedCount = totalItems.filter(item => state.checkedItems.includes(item.id)).length;
+            const totalCount = totalItems.length;
+            const progressEl = document.getElementById('checklist-progress');
+            const successEl = document.getElementById('success-banner');
+
+            if (progressEl) progressEl.innerText = `${checkedCount}/${totalCount}`;
+            const isAllChecked = totalCount > 0 && totalItems.every(item => state.checkedItems.includes(item.id));
+
+            if (isAllChecked) {
+                if (successEl) successEl.classList.remove('hidden');
+                triggerProfessionalConfetti();
+                if (!isInitial) setTimeout(highlightBenefits, 500);
+            } else {
+                if (successEl) successEl.classList.add('hidden');
+            }
+        }
+
+        function triggerProfessionalConfetti() {
+            const duration = 3 * 1000;
+            const animationEnd = Date.now() + duration;
+            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+            const interval = setInterval(function () {
+                const timeLeft = animationEnd - Date.now();
+                if (timeLeft <= 0) return clearInterval(interval);
+                confetti({ ...defaults, particleCount: 50 * (timeLeft / duration), origin: { x: Math.random() * 0.2 + 0.1, y: Math.random() - 0.2 } });
+                confetti({ ...defaults, particleCount: 50 * (timeLeft / duration), origin: { x: Math.random() * 0.2 + 0.7, y: Math.random() - 0.2 } });
+            }, 250);
+        }
+
+        function highlightBenefits() {
+            const section = document.querySelector('section.bg-white.rounded-xxl');
+            if (section) {
+                section.classList.add('animate-highlight');
+                section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                setTimeout(() => section.classList.remove('animate-highlight'), 1500);
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
