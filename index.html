@@ -209,7 +209,7 @@
                 <span id="service-count" class="text-[14px] text-[#adb5bd] font-medium">0개</span>
             </div>
             <p class="text-[12px] text-[#ced4da] px-1 mb-6 leading-tight">
-                아래 일부 서비스는 광고이며, 링크를 통한 구매 시 수수료를 지급받습니다. 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
+                아래 일부 서비스는 광고이며, 링크를 통한 구매 시 수수료를 지급받습니다.
             </p>
 
             <div id="service-list" class="space-y-1">
@@ -477,9 +477,11 @@
             const successEl = document.getElementById('success-banner');
 
             if (progressEl) progressEl.innerText = `${checkedCount}/${totalCount}`;
+            
+            // 데이터가 있고, 모든 항목이 체크되었으며, 현재 홈 화면일 때만 성공 배너 표시
             const isAllChecked = totalCount > 0 && totalItems.every(item => state.checkedItems.includes(item.id));
 
-            if (isAllChecked) {
+            if (isAllChecked && state.currentView === 'home') {
                 if (successEl) successEl.classList.remove('hidden');
                 triggerProfessionalConfetti();
                 if (!isInitial) setTimeout(highlightBenefits, 500);
