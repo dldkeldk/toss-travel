@@ -184,16 +184,12 @@
                     <p class="text-primary font-bold text-[15px]">준비 완료! 즐거운 여행 되세요 ✈️</p>
                 </div>
 
-                <div class="flex items-center justify-between mb-1 px-1">
+                <div class="flex items-center justify-between mb-4 px-1">
                     <div class="flex items-center gap-1.5">
                         <h3 id="main-checklist-title" class="font-manrope text-[18px] font-bold text-on-surface">필수 준비물</h3>
-                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-secondary font-bold">광고</span>
                     </div>
                     <span id="checklist-progress" class="text-[13px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-full">0/0</span>
                 </div>
-                <p class="text-[11px] text-secondary/40 px-1 mb-4 leading-tight">
-                    아래 서비스는 광고이며, 링크를 통한 구매 시 수수료를 지급받습니다.
-                </p>
 
                 <div id="checklist-items" class="space-y-2">
                     <!-- Items injected by JS -->
@@ -203,16 +199,12 @@
 
         <!-- Travel Benefits Section -->
         <section class="bg-white rounded-xxl pt-8 pb-10 px-container-margin mb-8 shadow-sm mx-container-margin">
-            <div class="flex items-center justify-between mb-1 px-1">
+            <div class="flex items-center justify-between mb-6 px-1">
                 <div class="flex items-center gap-1.5">
                     <h3 id="service-list-title" class="text-[19px] font-bold text-on-surface">여행 혜택</h3>
-                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-[#adb5bd] font-bold">광고</span>
                 </div>
                 <span id="service-count" class="text-[14px] text-[#adb5bd] font-medium">0개</span>
             </div>
-            <p class="text-[12px] text-[#ced4da] px-1 mb-6 leading-tight">
-                아래 서비스는 광고이며, 링크를 통한 구매 시 수수료를 지급받습니다.
-            </p>
 
             <div id="service-list" class="space-y-1">
                 <!-- Services injected by JS -->
@@ -409,7 +401,6 @@
                                 <span class="text-[16px] ${isChecked ? 'text-gray-400 line-through font-medium' : 'text-on-surface font-bold'} tracking-tight">
                                     ${item.text}
                                 </span>
-                                ${item.isAd && !isChecked ? `<span class="text-[9px] px-1 py-0.5 rounded bg-gray-100 text-secondary font-bold">광고</span>` : ''}
                             </div>
                             ${!isChecked && item.subtext ? `<p class="text-[13px] text-secondary leading-snug">${item.subtext}</p>` : ''}
                         </div>
